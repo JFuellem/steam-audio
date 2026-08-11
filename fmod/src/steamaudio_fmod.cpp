@@ -168,12 +168,14 @@ bool isRunningInEditor()
 #if defined(IPL_OS_WINDOWS)
     wchar_t moduleFileName[MAX_PATH] = {0};
     GetModuleFileName(nullptr, moduleFileName, MAX_PATH);
-    return (wcsstr(moduleFileName, L"FMOD Studio.exe") != nullptr);
+    // Match versioned installs too (e.g. "FMOD Studio 2.02.27.exe").
+    return (wcsstr(moduleFileName, L"FMOD Studio") != nullptr);
 #elif defined(IPL_OS_MACOSX)
     char moduleFileName[1024] = {0};
     uint32_t bufferSize = 1024;
     _NSGetExecutablePath(moduleFileName, &bufferSize);
-    return (strstr(moduleFileName, "FMOD Studio.app") != nullptr);
+    // Match versioned app bundles too (e.g. "FMOD Studio 2.02.27.app").
+    return (strstr(moduleFileName, "FMOD Studio") != nullptr);
 #elif defined(IPL_OS_LINUX)
     char moduleFileName[1024] = {0};
     readlink("/proc/self/exe", moduleFileName, 1024);
