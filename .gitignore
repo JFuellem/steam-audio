@@ -4,15 +4,30 @@
 # Generated CMake solutions
 */build/windows-vs****-*
 */build/osx
+*/build/wasm
+*/build/wasm-release
+
+# Downloaded / built third-party dependencies
+**/deps/
+**/deps-build/
 
 # Build results
 fmod/lib
+unity/lib
+core/bin
+core/lib
 
 unreal/src/SteamAudioUnreal/Plugins/SteamAudio/Source/SteamAudioSDK/lib
 unreal/src/SteamAudioUnreal/Plugins/FMODStudio/Binaries
 
 unity/src/project/SteamAudioUnity/Assets/Plugins/FMOD/platforms/mac/lib/*.bundle
 unity/src/project/SteamAudioUnity/Assets/Plugins/FMOD/platforms/win/lib/**/*.dll
+unity/src/project/SteamAudioUnity/Assets/Plugins/FMOD/platforms/html5/
 unity/src/project/SteamAudioUnity/Assets/Plugins/SteamAudio/Binaries/**/*.so
 unity/src/project/SteamAudioUnity/Assets/Plugins/SteamAudio/Binaries/**/*.dll
 unity/src/project/SteamAudioUnity/Assets/Plugins/SteamAudio/Binaries/**/*.bundle
+unity/src/project/SteamAudioUnity/Assets/Plugins/SteamAudio/Binaries/HTML5/
+
+# macOS Finder metadata
+.DS_Store
+**/.DS_Store

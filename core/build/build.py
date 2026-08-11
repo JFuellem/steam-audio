@@ -148,6 +148,7 @@ def cmake_generate(args):
         cmake_args += ['-DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH']
         cmake_args += ['-DEMSCRIPTEN_SYSTEM_PROCESSOR=arm']
         cmake_args += ['-DCMAKE_BUILD_TYPE=' + config_name(args)]
+        cmake_args += ['-DFLATBUFFERS_FLATC_EXECUTABLE=' + root_dir() + '/deps/flatbuffers/bin/osx/flatc']
 
     # Install files to bin/.
     cmake_args += ['-DCMAKE_INSTALL_PREFIX=' + root_dir() + '/bin']
@@ -296,6 +297,9 @@ if cmake_path is not None:
         os.environ['PATH'] = os.path.normpath(os.path.join(cmake_path, 'CMake.app', 'Contents', 'bin')) + os.pathsep + os.environ['PATH']
     else:
         os.environ['PATH'] = os.path.normpath(os.path.join(cmake_path, 'bin')) + os.pathsep + os.environ['PATH']
+
+if host_system == 'osx':
+    os.environ['PATH'] = os.path.normpath(os.getcwd() + '/../../deps/flatbuffers/bin/osx') + os.pathsep + os.environ['PATH']
 
 # CI defaults.
 if args.operation == 'ci_build':

@@ -16,6 +16,10 @@
 
 #pragma once
 
+#if defined(__EMSCRIPTEN__)
+#define IPL_DISABLE_THREADING
+#endif
+
 #include "job_graph.h"
 
 namespace ipl {
@@ -41,6 +45,7 @@ public:
     void cancel();
 
 private:
+#if !defined(IPL_DISABLE_THREADING)
     Array<std::thread> mThreads;
     std::atomic<bool> mCancel;
     std::atomic<int> mReady;
@@ -53,6 +58,7 @@ private:
     JobGraph* mJobGraph;
 
     void threadFunc(int threadId);
+#endif
 };
 
 }

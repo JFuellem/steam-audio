@@ -22,6 +22,8 @@ namespace ipl {
 // ThreadPool
 // --------------------------------------------------------------------------------------------------------------------
 
+#if !defined(IPL_DISABLE_THREADING)
+
 ThreadPool::ThreadPool(int numThreads)
     : mThreads(numThreads)
     , mCancel(false)
@@ -111,5 +113,31 @@ void ThreadPool::threadFunc(int threadId)
         mCondVarComplete.notify_one();
     }
 }
+
+#else
+
+ThreadPool::ThreadPool(int numThreads)
+{}
+
+ThreadPool::~ThreadPool()
+{}
+
+void ThreadPool::process(JobGraph& jobGraph)
+{
+    std::atomic<bool> cancel(false);
+    while (jobGraph.processNextJob(0, cancel));
+}
+
+void ThreadPool::process(JobGraph& jobGraph, std::function<void(float)> progressFn)
+{
+    process(jobGraph);
+    if (progressFn)
+        progressFn(1.0f);
+}
+
+void ThreadPool::cancel()
+{}
+
+#endif
 
 }
