@@ -318,12 +318,12 @@ typedef enum IPLSpatializerParams
      *
      *  **Range**: 0 to 4.
      *
-     *  Type of distance attenuation curve preset to use when \c APPLY_DISTANCEATTENUATION is \c 1.
+     *  Type of distance attenuation curve preset to use when \c APPLY_DISTANCEATTENUATION is \c 2.
      *
      *  - `0`: Linear squared rolloff.
      *  - `1`: Linear rolloff.
      *  - `2`: Inverse rolloff.
-     *  - `3`: Inverse squared rolloff.
+     *  - `3`: Inverse tapered rolloff.
      *  - `4`: Custom rolloff.
      */
     IPL_SPATIALIZE_DISTANCEATTENUATION_ROLLOFFTYPE,
@@ -333,7 +333,9 @@ typedef enum IPLSpatializerParams
      *
      *  **Range**: 0 to 10000.
      *
-     *  Minimum distance value for the distance attenuation curve.
+     *  Minimum distance value for the distance attenuation curve. Only used when
+     *  \c DISTANCEATTENUATION_OVERRIDE is true; otherwise the event's min distance (\c DISTANCE_ATTENUATION_RANGE)
+     *  is used.
      */
     IPL_SPATIALIZE_DISTANCEATTENUATION_MINDISTANCE,
 
@@ -342,7 +344,9 @@ typedef enum IPLSpatializerParams
      *
      *  **Range**: 0 to 10000.
      *
-     *  Maximum distance value for the distance attenuation curve.
+     *  Maximum distance value for the distance attenuation curve. Only used when
+     *  \c DISTANCEATTENUATION_OVERRIDE is true; otherwise the event's max distance (\c DISTANCE_ATTENUATION_RANGE)
+     *  is used.
      */
     IPL_SPATIALIZE_DISTANCEATTENUATION_MAXDISTANCE,
 
@@ -550,6 +554,17 @@ typedef enum IPLSpatializerParams
     IPL_SPATIALIZE_OUTPUT_FORMAT,
 
     IPL_SPATIALIZE_NORMALIZE_PATHING_EQ,
+
+    /**
+     *  **Type**: `FMOD_DSP_PARAMETER_TYPE_INT`
+     *
+     *  **Range**: 0 to 1.
+     *
+     *  If `1`, min/max distance are taken from \c DISTANCEATTENUATION_MINDISTANCE and
+     *  \c DISTANCEATTENUATION_MAXDISTANCE. If `0` (default), min/max distance are taken from the event
+     *  (\c DISTANCE_ATTENUATION_RANGE), matching FMOD Studio 2.02+ stock spatializer behavior.
+     */
+    IPL_SPATIALIZE_DISTANCEATTENUATION_OVERRIDE,
 
     /** The number of parameters in this effect. */
     IPL_SPATIALIZE_NUM_PARAMS

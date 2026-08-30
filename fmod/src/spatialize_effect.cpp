@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 
 #include "steamaudio_fmod.h"
 
@@ -65,7 +66,11 @@ FMOD_DSP_PARAMETER_DESC gParams[] = {
     { FMOD_DSP_PARAMETER_TYPE_INT, "SimOutHandle", "", "Simulation outputs handle." },
     { FMOD_DSP_PARAMETER_TYPE_INT, "OutputFormat", "", "Output Format" },
     { FMOD_DSP_PARAMETER_TYPE_BOOL, "PathNormEQ", "", "Normalize pathing EQ." },
+    { FMOD_DSP_PARAMETER_TYPE_INT, "DAOverride", "", "Override event min/max distance." },
 };
+
+static_assert(sizeof(gParams) / sizeof(gParams[0]) == IPL_SPATIALIZE_NUM_PARAMS,
+              "gParams must match IPLSpatializerParams");
 
 FMOD_DSP_PARAMETER_DESC* gParamsArray[IPL_SPATIALIZE_NUM_PARAMS];
 
@@ -73,8 +78,9 @@ const char* gParameterApplyTypeValues[] = {"Off", "Simulation-Defined", "User-De
 const char* gDistanceAttenuationTypeValues[] = {"Off", "Physics-Based", "Curve-Driven"};
 const char* gHRTFInterpolationValues[] = {"Nearest", "Bilinear"};
 const char* gTransmissionTypeValues[] = {"Frequency Independent", "Frequency Dependent"};
-const char* gRolloffTypeValues[] = {"Linear Squared", "Linear", "Inverse", "Inverse Squared", "Custom"};
+const char* gRolloffTypeValues[] = {"Linear Squared", "Linear", "Inverse", "Inverse Tapered", "Custom"};
 const char* gOutputFormatValues[] = {"From Mixer", "From Final Out", "From Input"};
+const char* gOverrideValues[] = {"Off", "On"};
 
 void initParamDescs()
 {
@@ -119,6 +125,7 @@ void initParamDescs()
     gParams[IPL_SPATIALIZE_SIMULATION_OUTPUTS_HANDLE].intdesc = {-1, 10000, -1};
     gParams[IPL_SPATIALIZE_OUTPUT_FORMAT].intdesc = {0, 2, 0, false, gOutputFormatValues};
     gParams[IPL_SPATIALIZE_NORMALIZE_PATHING_EQ].booldesc = {false};
+    gParams[IPL_SPATIALIZE_DISTANCEATTENUATION_OVERRIDE].intdesc = {0, 1, 0, false, gOverrideValues};
 }
 
 struct State
@@ -138,6 +145,7 @@ struct State
     FMOD_DSP_PAN_3D_ROLLOFF_TYPE distanceAttenuationRolloffType;
     float distanceAttenuationMinDistance;
     float distanceAttenuationMaxDistance;
+    bool distanceAttenuationOverride;
     float airAbsorption[3];
     float directivity;
     float dipoleWeight;
@@ -434,6 +442,7 @@ void reset(FMOD_DSP_STATE* state)
     effect->distanceAttenuationRolloffType = FMOD_DSP_PAN_3D_ROLLOFF_INVERSE;
     effect->distanceAttenuationMinDistance = 1.0f;
     effect->distanceAttenuationMaxDistance = 20.0f;
+    effect->distanceAttenuationOverride = false;
     effect->airAbsorption[0] = 1.0f;
     effect->airAbsorption[1] = 1.0f;
     effect->airAbsorption[2] = 1.0f;
@@ -580,6 +589,9 @@ FMOD_RESULT F_CALL getInt(FMOD_DSP_STATE* state,
         break;
     case IPL_SPATIALIZE_OUTPUT_FORMAT:
         *value = static_cast<int>(effect->outputFormat);
+        break;
+    case IPL_SPATIALIZE_DISTANCEATTENUATION_OVERRIDE:
+        *value = effect->distanceAttenuationOverride ? 1 : 0;
         break;
     default:
         return FMOD_ERR_INVALID_PARAM;
@@ -764,6 +776,14 @@ FMOD_RESULT F_CALL setInt(FMOD_DSP_STATE* state,
     case IPL_SPATIALIZE_OUTPUT_FORMAT:
         effect->outputFormat = static_cast<ParameterSpeakerFormatType>(value);
         break;
+    case IPL_SPATIALIZE_DISTANCEATTENUATION_OVERRIDE:
+        effect->distanceAttenuationOverride = (value != 0);
+        if (!effect->distanceAttenuationOverride && effect->attenuationRangeSet)
+        {
+            effect->distanceAttenuationMinDistance = effect->attenuationRange.min;
+            effect->distanceAttenuationMaxDistance = effect->attenuationRange.max;
+        }
+        break;
     default:
         return FMOD_ERR_INVALID_PARAM;
     }
@@ -853,12 +873,58 @@ FMOD_RESULT F_CALL setData(FMOD_DSP_STATE* state,
     case IPL_SPATIALIZE_DISTANCE_ATTENUATION_RANGE:
         memcpy(&effect->attenuationRange, value, length);
         effect->attenuationRangeSet = true;
+        if (!effect->distanceAttenuationOverride)
+        {
+            effect->distanceAttenuationMinDistance = effect->attenuationRange.min;
+            effect->distanceAttenuationMaxDistance = effect->attenuationRange.max;
+        }
         break;
     default:
         return FMOD_ERR_INVALID_PARAM;
     }
 
     return FMOD_OK;
+}
+
+void getDistanceAttenuationRange(const State* effect,
+                                 float* minDistance,
+                                 float* maxDistance)
+{
+    float minDist = 1.0f;
+    float maxDist = 20.0f;
+
+    if (effect->distanceAttenuationOverride || !effect->attenuationRangeSet)
+    {
+        minDist = effect->distanceAttenuationMinDistance;
+        maxDist = effect->distanceAttenuationMaxDistance;
+    }
+    else
+    {
+        minDist = effect->attenuationRange.min;
+        maxDist = effect->attenuationRange.max;
+    }
+
+    if (!std::isfinite(minDist) || minDist < 0.0f)
+        minDist = 0.0f;
+    if (!std::isfinite(maxDist) || maxDist < 0.0f)
+        maxDist = 0.0f;
+
+    constexpr float kMinSpan = 1.0e-3f;
+    if (maxDist <= minDist)
+    {
+        if (minDist <= 0.0f && maxDist <= 0.0f)
+        {
+            minDist = 1.0f;
+            maxDist = 20.0f;
+        }
+        else
+        {
+            maxDist = minDist + kMinSpan;
+        }
+    }
+
+    *minDistance = minDist;
+    *maxDistance = maxDist;
 }
 
 IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
@@ -889,8 +955,9 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
         params.flags = static_cast<IPLDirectEffectFlags>(params.flags | IPL_DIRECTEFFECTFLAGS_APPLYDISTANCEATTENUATION);
         if (effect->applyDistanceAttenuation == PARAMETER_USERDEFINED)
         {
-            auto minDistance = effect->attenuationRangeSet ? effect->attenuationRange.min : effect->distanceAttenuationMinDistance;
-            auto maxDistance = effect->attenuationRangeSet ? effect->attenuationRange.max : effect->distanceAttenuationMaxDistance;
+            float minDistance = 1.0f;
+            float maxDistance = 20.0f;
+            getDistanceAttenuationRange(effect, &minDistance, &maxDistance);
 
             state->functions->pan->getrolloffgain(state, effect->distanceAttenuationRolloffType,
                                                   distance(source.origin, listener.origin),
@@ -903,6 +970,11 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
 
             params.distanceAttenuation = iplDistanceAttenuationCalculate(gContext, source.origin, listener.origin, &distanceAttenuationModel);
         }
+
+        if (!std::isfinite(params.distanceAttenuation))
+            params.distanceAttenuation = 1.0f;
+        else
+            params.distanceAttenuation = std::min(std::max(params.distanceAttenuation, 0.0f), 1.0f);
     }
 
     if (effect->applyAirAbsorption == PARAMETER_DISABLE)

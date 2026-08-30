@@ -20,6 +20,10 @@ studio.plugins.registerPluginDescription("Steam Audio Spatializer", {
 	parameters: {
 		"DirectBinaural": {displayName: "Apply HRTF To Direct"},
 		"ApplyDA": {displayName: "Distance Attenuation"},
+		"DAOverride": {displayName: "Override", enumeration: ["Off", "On"]},
+		"DAType": {displayName: "Rolloff"},
+		"DAMinDist": {displayName: "Min Distance"},
+		"DAMaxDist": {displayName: "Max Distance"},
 		"ApplyAA": {displayName: "Air Absorption"},
 		"ApplyDir": {displayName: "Directivity"},
 		"ApplyOccl": {displayName: "Occlusion"},
@@ -86,6 +90,22 @@ studio.plugins.registerPluginDescription("Steam Audio Spatializer", {
 			{
 				deckWidgetType: studio.ui.deckWidgetType.Layout,
 				layout: studio.ui.layoutType.VBoxLayout,
+				minimumWidth: 70,
+				maximumWidth: 150,
+				spacing: 8,
+				contentsMargins: {left: 4, right: 4},
+				alignment: studio.ui.alignment.AlignBottom,
+				isFramed: true,
+				items: [
+					{
+						deckWidgetType: studio.ui.deckWidgetType.Dropdown,
+						binding: "DAOverride"
+					}
+				]
+			},
+			{
+				deckWidgetType: studio.ui.deckWidgetType.Layout,
+				layout: studio.ui.layoutType.VBoxLayout,
 				minimumWidth: 128,
 				maximumWidth: 250,
 				spacing: 8,
@@ -102,7 +122,7 @@ studio.plugins.registerPluginDescription("Steam Audio Spatializer", {
 							0: studio.project.distanceRolloffType.LinearSquared,
 							1: studio.project.distanceRolloffType.Linear,
 							2: studio.project.distanceRolloffType.Inverse,
-							3: studio.project.distanceRolloffType.InverseSquared,
+							3: studio.project.distanceRolloffType.InverseTapered,
 							4: studio.project.distanceRolloffType.Custom,
 						}
 					},

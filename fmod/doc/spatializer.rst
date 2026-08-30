@@ -17,9 +17,15 @@ Distance Attenuation
 
     -   *Off*. Distance attenuation is not applied.
 
-    -   *Curve-Driven*. Distance attenuation is controlled by the curves on the Steam Audio Spatializer effect. These work identically to the curves on FMOD's built-in spatializer effect.
+    -   *Physics-Based*. A physics-based distance attenuation model is used. This is an inverse distance falloff (1 / max(distance, 1 m)). The curves and min/max distances on the Steam Audio Spatializer are ignored.
 
-    -   *Physics-Based*. A physics-based distance attenuation model is used. This is an inverse distance falloff. The curves defined on the Steam Audio Spatializer are ignored.
+    -   *Curve-Driven*. Distance attenuation is controlled by the rolloff type on the Steam Audio Spatializer (Linear, Inverse, Inverse Tapered, etc.). These match FMOD's built-in spatializer curves. Min/max come from the event unless **Override** is on.
+
+Override
+    Off (default) uses the event's min/max distance (including Unity Override Attenuation). On uses the min/max fader on this effect.
+
+Min & Max Distances
+    Only applied when **Override** is on. When override is off, this fader follows the event's min/max distance.
 
 Air Absorption
     Specifies how frequency-dependent distance-based air absorption is calculated and applied to the event.
