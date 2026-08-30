@@ -16,6 +16,8 @@
 
 #include "steamaudio_fmod.h"
 
+#include <exception>
+
 #if defined(IPL_OS_MACOSX)
 #include <mach-o/dyld.h>
 #elif defined(IPL_OS_LINUX)
@@ -194,25 +196,32 @@ bool isRunningInEditor()
 
 void initContextAndDefaultHRTF(IPLAudioSettings audioSettings)
 {
-    IPLContextSettings contextSettings{};
-    contextSettings.version = STEAMAUDIO_VERSION;
-    contextSettings.simdLevel = IPL_SIMDLEVEL_AVX2;
+    try
+    {
+        IPLContextSettings contextSettings{};
+        contextSettings.version = STEAMAUDIO_VERSION;
+        contextSettings.simdLevel = IPL_SIMDLEVEL_AVX2;
 
-    IPLContext context = nullptr;
-    IPL_API(iplContextCreate(&contextSettings, &context));
+        IPLContext context = nullptr;
+        IPL_API(iplContextCreate(&contextSettings, &context));
 
-    IPLHRTFSettings hrtfSettings{};
-    hrtfSettings.type = IPL_HRTFTYPE_DEFAULT;
-    hrtfSettings.volume = 1.0f;
+        IPLHRTFSettings hrtfSettings{};
+        hrtfSettings.type = IPL_HRTFTYPE_DEFAULT;
+        hrtfSettings.volume = 1.0f;
 
-    IPLHRTF hrtf = nullptr;
-    iplHRTFCreate(context, &audioSettings, &hrtfSettings, &hrtf);
+        IPLHRTF hrtf = nullptr;
+        iplHRTFCreate(context, &audioSettings, &hrtfSettings, &hrtf);
 
-    iplFMODInitialize(context);
-    iplFMODSetHRTF(hrtf);
+        iplFMODInitialize(context);
+        iplFMODSetHRTF(hrtf);
 
-    iplHRTFRelease(&hrtf);
-    iplContextRelease(&context);
+        iplHRTFRelease(&hrtf);
+        iplContextRelease(&context);
+    }
+    catch (const std::exception&)
+    {
+        // Failed dlopen of libphonon (often unsigned on macOS) must not abort FMOD Studio.
+    }
 }
 
 bool initFmodOutBufferFormat(const FMOD_DSP_BUFFER_ARRAY* inBuffers, 
