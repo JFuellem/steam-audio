@@ -14,6 +14,11 @@
 // limitations under the License.
 //
 
+var gRolloffTypes = studio.project.distanceRolloffType;
+var gInverseSquaredOrTapered = (typeof gRolloffTypes.InverseTapered !== "undefined")
+	? gRolloffTypes.InverseTapered
+	: ((typeof gRolloffTypes.InverseSquared !== "undefined") ? gRolloffTypes.InverseSquared : 3);
+
 studio.plugins.registerPluginDescription("Steam Audio Spatializer", {
 	companyName: "Valve",
 	productName: "Steam Audio Spatializer",
@@ -119,11 +124,11 @@ studio.plugins.registerPluginDescription("Steam Audio Spatializer", {
 						minimumDistanceBinding: "DAMinDist",
 						maximumDistanceBinding: "DAMaxDist",
 						rolloffTypes: {
-							0: studio.project.distanceRolloffType.LinearSquared,
-							1: studio.project.distanceRolloffType.Linear,
-							2: studio.project.distanceRolloffType.Inverse,
-							3: studio.project.distanceRolloffType.InverseTapered,
-							4: studio.project.distanceRolloffType.Custom,
+							0: gRolloffTypes.LinearSquared,
+							1: gRolloffTypes.Linear,
+							2: gRolloffTypes.Inverse,
+							3: gInverseSquaredOrTapered,
+							4: gRolloffTypes.Custom,
 						}
 					},
 					{
