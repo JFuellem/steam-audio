@@ -165,6 +165,26 @@ IPLCoordinateSpace3 calcListenerCoordinates(FMOD_DSP_STATE* state)
     return calcCoordinates(listenerAttributes);
 }
 
+float calcAttenuationDistance(const FMOD_DSP_PARAMETER_3DATTRIBUTES& sourceAttributes,
+                              const IPLVector3& listenerOrigin)
+{
+    const auto& relative = sourceAttributes.relative.position;
+    auto relativeDistance = sqrtf(relative.x * relative.x + relative.y * relative.y + relative.z * relative.z);
+
+    auto sourceOrigin = convertVector(sourceAttributes.absolute.position.x,
+                                      sourceAttributes.absolute.position.y,
+                                      sourceAttributes.absolute.position.z);
+    auto listenerDistance = distance(sourceOrigin, listenerOrigin);
+
+    // Studio always fills relative. Core API users may only set absolute; if relative
+    // is zero while the source is not at the listener, use the listener distance.
+    constexpr float kUnsetEpsilon = 1.0e-6f;
+    if (relativeDistance <= kUnsetEpsilon && listenerDistance > kUnsetEpsilon)
+        return listenerDistance;
+
+    return relativeDistance;
+}
+
 bool isRunningInEditor()
 {
 #if defined(IPL_OS_WINDOWS)

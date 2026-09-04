@@ -126,6 +126,13 @@ IPLCoordinateSpace3 calcCoordinates(const FMOD_3D_ATTRIBUTES& attributes);
 // Extracts listener coordinate system from the transform provided by FMOD.
 IPLCoordinateSpace3 calcListenerCoordinates(FMOD_DSP_STATE* state);
 
+// Distance used for volume and air absorption. FMOD encodes the listener attenuation
+// position in the length of source.relative (direction stays listener-relative). If no
+// attenuation object is set, that length is the source-to-listener distance. Falls back
+// to absolute source-to-listener distance when relative is unset (e.g. Core API).
+float calcAttenuationDistance(const FMOD_DSP_PARAMETER_3DATTRIBUTES& sourceAttributes,
+                              const IPLVector3& listenerOrigin);
+
 // Returns true if we're currently running in the FMOD Studio editor.
 bool isRunningInEditor();
 
@@ -218,6 +225,9 @@ typedef enum IPLSpatializerParams
      *  -   `0`: Don't render distance attenuation.
      *  -   `1`: Use a distance attenuation value calculated using the default physics-based model.
      *  -   `2`: Use a distance attenuation value calculated using the curve specified in the FMOD Studio UI.
+     *
+     *  Distance is the FMOD listener attenuation position (Unity Attenuation Object), falling back to
+     *  the listener when none is set. HRTF direction always uses the listener.
      */
     IPL_SPATIALIZE_APPLY_DISTANCEATTENUATION,
 
@@ -319,11 +329,12 @@ typedef enum IPLSpatializerParams
      *  **Range**: 0 to 4.
      *
      *  Type of distance attenuation curve preset to use when \c APPLY_DISTANCEATTENUATION is \c 2.
+     *  Indices match \c FMOD_DSP_PAN_3D_ROLLOFF_TYPE and are stable across FMOD versions.
      *
      *  - `0`: Linear squared rolloff.
      *  - `1`: Linear rolloff.
      *  - `2`: Inverse rolloff.
-     *  - `3`: Inverse tapered rolloff.
+     *  - `3`: Inverse tapered rolloff (Inverse Squared on older FMOD Studio).
      *  - `4`: Custom rolloff.
      */
     IPL_SPATIALIZE_DISTANCEATTENUATION_ROLLOFFTYPE,

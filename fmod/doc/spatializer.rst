@@ -19,7 +19,9 @@ Distance Attenuation
 
     -   *Physics-Based*. A physics-based distance attenuation model is used. This is an inverse distance falloff (1 / max(distance, 1 m)). The curves and min/max distances on the Steam Audio Spatializer are ignored.
 
-    -   *Curve-Driven*. Distance attenuation is controlled by the rolloff type on the Steam Audio Spatializer (Linear, Inverse, Inverse Tapered, etc.). These match FMOD's built-in spatializer curves. Min/max come from the event unless **Override** is on.
+    -   *Curve-Driven*. Distance attenuation is controlled by the rolloff type on the Steam Audio Spatializer (Linear, Inverse, Inverse Tapered, etc.). These match FMOD's built-in spatializer curves. The fourth curve is Inverse Tapered, or Inverse Squared on older Studio that still uses that name; the stored value is the same. Min/max come from the event unless **Override** is on.
+
+    Distance is measured from the source to FMOD's listener attenuation position. If Unity's Studio Listener has an **Attenuation Object**, that object's position is used for volume. If it is left empty, distance falls back to the listener, matching FMOD's built-in spatializer. HRTF direction always uses the listener.
 
 Override
     Off (default) uses the event's min/max distance (including Unity Override Attenuation). On uses the min/max fader on this effect.
@@ -32,7 +34,7 @@ Air Absorption
 
     -   *Off*. Air absorption is not applied.
 
-    -   *Simulation-Defined*. Uses a physics-based air absorption model. This is an exponential falloff, with higher frequencies falling off faster with distance than lower frequencies.
+    -   *Simulation-Defined*. Uses a physics-based air absorption model. This is an exponential falloff, with higher frequencies falling off faster with distance than lower frequencies. Uses the same source-to-attenuation-object distance as **Distance Attenuation**.
 
     -   *User-Defined*. Uses the values specified in the **Air Absorption Low**, **Air Absorption Mid**, and **Air Absorption High** dials as the EQ values. The air absorption value will not automatically change with distance to the source. You are expected to control the **Air Absorption Low**, **Air Absorption Mid**, and **Air Absorption High** dials using a parameter to achieve this effect.
 

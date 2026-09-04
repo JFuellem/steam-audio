@@ -78,6 +78,7 @@ const char* gParameterApplyTypeValues[] = {"Off", "Simulation-Defined", "User-De
 const char* gDistanceAttenuationTypeValues[] = {"Off", "Physics-Based", "Curve-Driven"};
 const char* gHRTFInterpolationValues[] = {"Nearest", "Bilinear"};
 const char* gTransmissionTypeValues[] = {"Frequency Independent", "Frequency Dependent"};
+// Index 3 is FMOD_DSP_PAN_3D_ROLLOFF_INVERSETAPERED. Older Studio labeled this slot Inverse Squared.
 const char* gRolloffTypeValues[] = {"Linear Squared", "Linear", "Inverse", "Inverse Tapered", "Custom"};
 const char* gOutputFormatValues[] = {"From Mixer", "From Final Out", "From Input"};
 const char* gOverrideValues[] = {"Off", "On"};
@@ -946,6 +947,10 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
     params.transmissionType = effect->transmissionType;
 
     params.flags = static_cast<IPLDirectEffectFlags>(0);
+
+    auto attenuationDistance = calcAttenuationDistance(effect->source, listener.origin);
+    IPLVector3 attenuationPoint{source.origin.x + attenuationDistance, source.origin.y, source.origin.z};
+
     if (effect->applyDistanceAttenuation == PARAMETER_DISABLE)
     {
         params.distanceAttenuation = 1.0f;
@@ -960,7 +965,7 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
             getDistanceAttenuationRange(effect, &minDistance, &maxDistance);
 
             state->functions->pan->getrolloffgain(state, effect->distanceAttenuationRolloffType,
-                                                  distance(source.origin, listener.origin),
+                                                  attenuationDistance,
                                                   minDistance, maxDistance, &params.distanceAttenuation);
         }
         else
@@ -968,7 +973,7 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
             IPLDistanceAttenuationModel distanceAttenuationModel{};
             distanceAttenuationModel.type = IPL_DISTANCEATTENUATIONTYPE_DEFAULT;
 
-            params.distanceAttenuation = iplDistanceAttenuationCalculate(gContext, source.origin, listener.origin, &distanceAttenuationModel);
+            params.distanceAttenuation = iplDistanceAttenuationCalculate(gContext, source.origin, attenuationPoint, &distanceAttenuationModel);
         }
 
         if (!std::isfinite(params.distanceAttenuation))
@@ -995,7 +1000,7 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
             IPLAirAbsorptionModel airAbsorptionModel{};
             airAbsorptionModel.type = IPL_AIRABSORPTIONTYPE_DEFAULT;
 
-            iplAirAbsorptionCalculate(gContext, source.origin, listener.origin, &airAbsorptionModel, params.airAbsorption);
+            iplAirAbsorptionCalculate(gContext, source.origin, attenuationPoint, &airAbsorptionModel, params.airAbsorption);
         }
     }
 
