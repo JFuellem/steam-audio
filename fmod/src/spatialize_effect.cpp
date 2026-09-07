@@ -168,6 +168,8 @@ struct State
     std::atomic<bool> newSimulationSourceWritten;
 
     float prevDirectMixLevel;
+    float prevDistanceAttenuation;
+    float lastDistanceAttenuation;
     float prevReflectionsMixLevel;
     float prevPathingMixLevel;
 
@@ -470,6 +472,8 @@ void reset(FMOD_DSP_STATE* state)
     effect->newSimulationSourceWritten = false;
 
     effect->prevDirectMixLevel = 1.0f;
+    effect->prevDistanceAttenuation = 1.0f;
+    effect->lastDistanceAttenuation = 1.0f;
     effect->prevReflectionsMixLevel = 0.0f;
     effect->prevPathingMixLevel = 0.0f;
 
@@ -957,7 +961,9 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
     }
     else
     {
-        params.flags = static_cast<IPLDirectEffectFlags>(params.flags | IPL_DIRECTEFFECTFLAGS_APPLYDISTANCEATTENUATION);
+        // Apply DA in process() with a 1-buffer ramp. DirectEffect's GainEffect interpolates
+        // over 4 mix buffers and only runs when FMOD calls process; silent gaps in a loop
+        // (footsteps) skip those buffers, so gain would catch up once per loop cycle.
         if (effect->applyDistanceAttenuation == PARAMETER_USERDEFINED)
         {
             float minDistance = 1.0f;
@@ -981,6 +987,8 @@ IPLDirectEffectParams getDirectParams(FMOD_DSP_STATE* state,
         else
             params.distanceAttenuation = std::min(std::max(params.distanceAttenuation, 0.0f), 1.0f);
     }
+
+    effect->lastDistanceAttenuation = params.distanceAttenuation;
 
     if (effect->applyAirAbsorption == PARAMETER_DISABLE)
     {
@@ -1124,11 +1132,10 @@ FMOD_RESULT F_CALL process(FMOD_DSP_STATE* state,
             }
             else
             {
-                // if the sound is idle, we still need to check the expected overall gain to help manage
-                // channel counts. updateOverallGain won't do any processing - just determine how loud
-                // the sound would be (according to attenuation, etc) if it were playing.
-                // Note: the SteamAudio Unity plugin now calculates iplGetDirectSoundPath so this is even lighter
+                // Input is silent (typical between looping transients). Skip HRTF, but snap
+                // distance gain so the next audible buffer is not still lerping from seconds ago.
                 updateOverallGain(state, sourceCoordinates, listenerCoordinates);
+                effect->prevDistanceAttenuation = effect->lastDistanceAttenuation;
                 return FMOD_ERR_DSP_DONTPROCESS;
             }
         }
@@ -1255,11 +1262,14 @@ FMOD_RESULT F_CALL process(FMOD_DSP_STATE* state,
                 effect->hasTail = true;
         }
 
+        auto startDirectGain = effect->prevDirectMixLevel * effect->prevDistanceAttenuation;
+        auto endDirectGain = effect->directMixLevel * effect->lastDistanceAttenuation;
         for (auto i = 0; i < numChannelsOut; ++i)
         {
-            applyVolumeRamp(effect->prevDirectMixLevel, effect->directMixLevel, frameSize, effect->outBuffer.data[i]);
+            applyVolumeRamp(startDirectGain, endDirectGain, frameSize, effect->outBuffer.data[i]);
         }
         effect->prevDirectMixLevel = effect->directMixLevel;
+        effect->prevDistanceAttenuation = effect->lastDistanceAttenuation;
 
         if (effect->simulationSource[0])
         {
